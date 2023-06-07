@@ -417,8 +417,15 @@ export default defineComponent({
   border-radius: 0;
 
   @media (max-width: 1350px) {
-    width: max-content;
+    width: 100%;
+    max-width: 500px;
     margin: 0 auto 0 0;
+  }
+  @media (max-width: 768px) {
+    max-width: 320px;
+  }
+  @media (max-width: 500px) {
+    max-width: 200px;
   }
 
   &:deep() {
