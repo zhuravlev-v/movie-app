@@ -9,7 +9,13 @@
 </template>
 
 <script setup>
-import { ref, toRefs, onMounted, computed, watch } from 'vue'
+import { 
+  ref,
+  toRefs,
+  computed,
+  watch,
+  onBeforeMount
+} from 'vue'
 import { useFetch } from '@/service/fetch'
 import { useTabsStore } from '@/stores/tabs'
 import { getMoviePosterUrl } from '@/service/getMoviePosterUrl'
@@ -79,7 +85,6 @@ const initData = async () => {
     nowPlaying.value.results.forEach((item, index, array) => {
       array[index] = allNowPlaying[index]
     });
-
   }
   else if (currentTab.value === 1) {
     ({ data: popularMovies.value, error: popularMoviesError.value } = await useFetch('/tv/popular'));
@@ -91,13 +96,12 @@ const initData = async () => {
     ({ data: topRated.value, error: topRatedError.value } = await useFetch('/movie/top_rated'));
     ({ data: nowPlaying.value, error: nowPlayingError.value } = await useFetch('/movie/now_playing'));
   }
-
-  const posterUrl = getMoviePosterUrl(nowPlaying?.value?.results[movieId.value]?.backdrop_path)
-  setBackground(home.value, posterUrl)
 }
 
-onMounted(async () => {
+onBeforeMount(async () => {
   await initData()
+  const posterUrl = getMoviePosterUrl(nowPlaying?.value?.results[movieId.value]?.backdrop_path)
+  setBackground(home.value, posterUrl)
 })
 
 watch(currentTab, async () => {
