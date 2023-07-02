@@ -10,25 +10,11 @@
   </div>
 </template>
 
-<script>
-import { defineComponent, ref, toRefs } from 'vue'
+<script setup>
+import { toRefs } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 
-export default defineComponent({
-  name: 'AppTabs',
-  components: {},
-  props: {},
-  setup(props, context) {
-
-    const { tabs, currentTab, setTab } = toRefs(useTabsStore())
-
-    return {
-      tabs,
-      currentTab,
-      setTab,
-    }
-  }
-})
+const { tabs, currentTab, setTab } = toRefs(useTabsStore())
 </script>
 
 <style lang='scss' scoped>

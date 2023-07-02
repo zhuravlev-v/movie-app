@@ -29,48 +29,37 @@
   </div>
 </template>
 
-<script>
-import { defineComponent, onMounted, ref, computed } from 'vue'
+<script setup>
+import { onMounted, ref, computed } from 'vue'
 import AppTabs from '@/components/AppTabs.vue'
 import { convertImages } from '@/service/convertImages'
 import { parseDate } from '@/utils/parseDate'
 
-export default defineComponent({
-  name: 'MoviePreview',
-  components: { AppTabs },
-  props: {
-    movie: { type: Object, required: true }
-  },
-  setup(props, context) {
-    const preview = ref(null)
-    const isMovie = computed(() => !!props.movie.release_date)
-    const title = computed(() => {
-      if (isMovie.value) {
-        return props.movie.title
-      }
-      else {
-        return props.movie.name
-      }
-    })
-    const releaseDate = computed(() => {
-      if (isMovie.value) {
-        return parseDate(props.movie.release_date, 'year')
-      }
-      else {
-        return parseDate(props.movie.first_air_date, 'year')
-      }
-    })
+const props = defineProps({
+  movie: { type: Object, required: true }
+})
 
-    onMounted(() => {
-      convertImages(preview.value, '[data-convertable]')
-    })
-
-    return {
-      preview,
-      title,
-      releaseDate,
-    }
+const preview = ref(null)
+const isMovie = computed(() => !!props.movie.release_date)
+const title = computed(() => {
+  if (isMovie.value) {
+    return props.movie.title
   }
+  else {
+    return props.movie.name
+  }
+})
+const releaseDate = computed(() => {
+  if (isMovie.value) {
+    return parseDate(props.movie.release_date, 'year')
+  }
+  else {
+    return parseDate(props.movie.first_air_date, 'year')
+  }
+})
+
+onMounted(() => {
+  convertImages(preview.value, '[data-convertable]')
 })
 </script>
 

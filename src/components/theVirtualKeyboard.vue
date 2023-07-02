@@ -2,56 +2,48 @@
   <div :class="keyboardClass"></div>
 </template>
 
-<script>
-import { defineComponent, ref, onMounted, watch } from 'vue'
+<script setup>
+import { ref, onMounted, watch } from 'vue'
 import Keyboard from "simple-keyboard"
 import "simple-keyboard/build/css/index.css"
 
-export default defineComponent({
-  name: 'theVirtualKeyboard',
-  components: {},
-  emits: ['onChange', 'onKeyPress'],
-  props: {
-    keyboardClass: { type: String, default: "simple-keyboard" },
-    input: { type: String }
-  },
-  setup(props, { emit }) {
-    let keyboard = ref(null)
+const props = defineProps({
+  keyboardClass: { type: String, default: "simple-keyboard" },
+  input: { type: String }
+})
 
-    function onChange(input) {
-      emit("onChange", input);
-    }
+const emit = defineEmits(['onChange', 'onKeyPress'])
 
-    function onKeyPress(button) {
-      emit("onKeyPress", button);
-      // If you want to handle the shift and caps lock buttons
-      if (button === "{shift}" || button === "{lock}") handleShift();
-    }
+let keyboard = ref(null)
 
-    function handleShift() {
-      let currentLayout = keyboard.value.options.layoutName;
-      let shiftToggle = currentLayout === "default" ? "shift" : "default";
+function onChange(input) {
+  emit("onChange", input);
+}
 
-      keyboard.value.setOptions({
-        layoutName: shiftToggle
-      });
-    }
+function onKeyPress(button) {
+  emit("onKeyPress", button);
+  // If you want to handle the shift and caps lock buttons
+  if (button === "{shift}" || button === "{lock}") handleShift();
+}
 
-    watch(() => props.input, (input) => {
-      keyboard.value.setInput(input);
-    })
+function handleShift() {
+  let currentLayout = keyboard.value.options.layoutName;
+  let shiftToggle = currentLayout === "default" ? "shift" : "default";
 
-    onMounted(() => {
-      keyboard.value = new Keyboard(props.keyboardClass, {
-        onChange,
-        onKeyPress,
-      })
-    })
+  keyboard.value.setOptions({
+    layoutName: shiftToggle
+  });
+}
 
-    return {
-      keyboard
-    }
-  }
+watch(() => props.input, (input) => {
+  keyboard.value.setInput(input);
+})
+
+onMounted(() => {
+  keyboard.value = new Keyboard(props.keyboardClass, {
+    onChange,
+    onKeyPress,
+  })
 })
 </script>
 
@@ -61,6 +53,7 @@ export default defineComponent({
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 2px;
 }
+
 :global(.hg-theme-default .hg-button.hg-activeButton) {
   background: unset;
   opacity: 0.8;

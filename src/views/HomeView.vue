@@ -8,8 +8,8 @@
   </div>
 </template>
 
-<script>
-import { defineComponent, ref, toRefs, onMounted, computed, watch } from 'vue'
+<script setup>
+import { ref, toRefs, onMounted, computed, watch } from 'vue'
 import { useFetch } from '@/service/fetch'
 import { useTabsStore } from '@/stores/tabs'
 import { getMoviePosterUrl } from '@/service/getMoviePosterUrl'
@@ -19,116 +19,89 @@ import { setBackground } from '@/utils/setBackground'
 import MovieSlider from '@/components/MovieSlider.vue'
 import MoviePreview from '@/components/MoviePreview.vue'
 
-export default defineComponent({
-  name: 'HomeView',
-  components: {
-    MovieSlider, MoviePreview,
-  },
-  props: {},
-  setup(props, context) {
-    let home = ref(null)
-    let nowPlaying = ref(null)
-    let nowPlayingError = ref(null)
-    let popularMovies = ref(null)
-    let popularMoviesError = ref(null)
-    let topRated = ref(null)
-    let topRatedError = ref(null)
-    const movieId = ref(generateRandomNumber(0, 19))
-    const { currentTab } = toRefs(useTabsStore())
+let home = ref(null)
+let nowPlaying = ref(null)
+let nowPlayingError = ref(null)
+let popularMovies = ref(null)
+let popularMoviesError = ref(null)
+let topRated = ref(null)
+let topRatedError = ref(null)
+const movieId = ref(generateRandomNumber(0, 19))
+const { currentTab } = toRefs(useTabsStore())
 
-    const popularMoviesTitle = computed(() => {
-      switch (currentTab.value) {
-        case 0:
-          return 'Popular';
-        case 1:
-          return 'Popular TV show';
-        case 2:
-          return 'Popular Movie';
-        default:
-          return '';
-          break;
-      }
-    })
+const popularMoviesTitle = computed(() => {
+  switch (currentTab.value) {
+    case 0:
+      return 'Popular';
+    case 1:
+      return 'Popular TV show';
+    case 2:
+      return 'Popular Movie';
+    default:
+      return '';
+      break;
+  }
+})
 
-    // TODO: every time when switch tabs initData fetches data again. Need to be cached
-    const initData = async () => {
-      if (currentTab.value === 0) {
-        const { data: popularTVseries, error: popularTVseriesError } = await useFetch('/tv/popular');
-        const { data: topRatedTVseries, error: topRatedTVseriesError } = await useFetch('/tv/top_rated');
-        const { data: nowPlayingTVseries, error: nowPlayingTVseriesError } = await useFetch('/tv/on_the_air');
+// TODO: every time when switch tabs initData fetches data again. Need to be cached
+const initData = async () => {
+  if (currentTab.value === 0) {
+    const { data: popularTVseries, error: popularTVseriesError } = await useFetch('/tv/popular');
+    const { data: topRatedTVseries, error: topRatedTVseriesError } = await useFetch('/tv/top_rated');
+    const { data: nowPlayingTVseries, error: nowPlayingTVseriesError } = await useFetch('/tv/on_the_air');
 
-        const { data: popularFilms, error: popularFilmsError } = await useFetch('/movie/popular');
-        const { data: topRatedFilms, error: topRatedFilmsError } = await useFetch('/movie/top_rated');
-        const { data: nowPlayingFilms, error: nowPlayingFilmsError } = await useFetch('/movie/now_playing');
+    const { data: popularFilms, error: popularFilmsError } = await useFetch('/movie/popular');
+    const { data: topRatedFilms, error: topRatedFilmsError } = await useFetch('/movie/top_rated');
+    const { data: nowPlayingFilms, error: nowPlayingFilmsError } = await useFetch('/movie/now_playing');
 
-        // COMMENT: shuffleArray mutates original arrays?
-        const allPopular = shuffleArray([...popularTVseries.results, ...popularFilms.results])
-        const allTopRated = shuffleArray([...topRatedTVseries.results, ...topRatedFilms.results])
-        const allNowPlaying = shuffleArray([...nowPlayingTVseries.results, ...nowPlayingFilms.results])
+    // COMMENT: shuffleArray mutates original arrays?
+    const allPopular = shuffleArray([...popularTVseries.results, ...popularFilms.results])
+    const allTopRated = shuffleArray([...topRatedTVseries.results, ...topRatedFilms.results])
+    const allNowPlaying = shuffleArray([...nowPlayingTVseries.results, ...nowPlayingFilms.results])
 
-        popularMovies.value = {}
-        popularMovies.value.results = new Array(20).fill(null)
+    popularMovies.value = {}
+    popularMovies.value.results = new Array(20).fill(null)
 
-        popularMovies.value.results.forEach((item, index, array) => {
-          array[index] = allPopular[index]
-        });
+    popularMovies.value.results.forEach((item, index, array) => {
+      array[index] = allPopular[index]
+    });
 
-        topRated.value = {}
-        topRated.value.results = new Array(20).fill(null)
+    topRated.value = {}
+    topRated.value.results = new Array(20).fill(null)
 
-        topRated.value.results.forEach((item, index, array) => {
-          array[index] = allTopRated[index]
-        });
+    topRated.value.results.forEach((item, index, array) => {
+      array[index] = allTopRated[index]
+    });
 
-        nowPlaying.value = {}
-        nowPlaying.value.results = new Array(20).fill(null)
+    nowPlaying.value = {}
+    nowPlaying.value.results = new Array(20).fill(null)
 
-        nowPlaying.value.results.forEach((item, index, array) => {
-          array[index] = allNowPlaying[index]
-        });
+    nowPlaying.value.results.forEach((item, index, array) => {
+      array[index] = allNowPlaying[index]
+    });
 
-      }
-      else if (currentTab.value === 1) {
-        ({ data: popularMovies.value, error: popularMoviesError.value } = await useFetch('/tv/popular'));
-        ({ data: topRated.value, error: topRatedError.value } = await useFetch('/tv/top_rated'));
-        ({ data: nowPlaying.value, error: nowPlayingError.value } = await useFetch('/tv/on_the_air'));
-      }
-      else if (currentTab.value === 2) {
-        ({ data: popularMovies.value, error: popularMoviesError.value } = await useFetch('/movie/popular'));
-        ({ data: topRated.value, error: topRatedError.value } = await useFetch('/movie/top_rated'));
-        ({ data: nowPlaying.value, error: nowPlayingError.value } = await useFetch('/movie/now_playing'));
-      }
+  }
+  else if (currentTab.value === 1) {
+    ({ data: popularMovies.value, error: popularMoviesError.value } = await useFetch('/tv/popular'));
+    ({ data: topRated.value, error: topRatedError.value } = await useFetch('/tv/top_rated'));
+    ({ data: nowPlaying.value, error: nowPlayingError.value } = await useFetch('/tv/on_the_air'));
+  }
+  else if (currentTab.value === 2) {
+    ({ data: popularMovies.value, error: popularMoviesError.value } = await useFetch('/movie/popular'));
+    ({ data: topRated.value, error: topRatedError.value } = await useFetch('/movie/top_rated'));
+    ({ data: nowPlaying.value, error: nowPlayingError.value } = await useFetch('/movie/now_playing'));
+  }
 
-      const posterUrl = getMoviePosterUrl(nowPlaying?.value?.results[movieId.value]?.backdrop_path)
-      setBackground(home.value, posterUrl)
-    }
+  const posterUrl = getMoviePosterUrl(nowPlaying?.value?.results[movieId.value]?.backdrop_path)
+  setBackground(home.value, posterUrl)
+}
 
-    // const setBackground = (element: Object, url: String) => {
-    //   element.style.setProperty('--background', `linear-gradient(90deg, #1D1D1D 0%, rgba(29, 29, 29, 0.49) 100%), url(${url}), #2D2D2D`);
-    // }
+onMounted(async () => {
+  await initData()
+})
 
-    onMounted(async () => {
-      // ({ data: genreData.value, error: genreError.value } = await useFetch('/genre/movie/list?language=en'));
-      await initData()
-    })
-
-    watch(currentTab, async () => {
-      await initData()
-    })
-
-    return {
-      home,
-      movieId,
-      currentTab,
-      popularMovies,
-      popularMoviesError,
-      topRated,
-      topRatedError,
-      nowPlaying,
-      nowPlayingError,
-      popularMoviesTitle,
-    }
-  },
+watch(currentTab, async () => {
+  await initData()
 })
 </script>
 

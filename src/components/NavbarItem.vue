@@ -6,34 +6,24 @@
   </div>
 </template>
 
-<script>
-import { defineComponent, onMounted, ref } from 'vue'
+<script setup>
+import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import convertImages from '../utils/convertImages';
 
-export default defineComponent({
-  name: 'NavbarItem',
-  components: {},
-  props: {
-    link: { type: String, required: true },
-    icon: { type: String, required: true }
-  },
-  setup(props, context) {
-    const image = ref(null)
+const props = defineProps({
+  link: { type: String, required: true },
+  icon: { type: String, required: true }
+})
 
-    const getIconUrl = (name) => {
-      return new URL(`../assets/images/${name}`, import.meta.url).href
-    }
+const image = ref(null)
 
-    onMounted(() => {
-      convertImages(image.value)
-    })
+const getIconUrl = (name) => {
+  return new URL(`../assets/images/${name}`, import.meta.url).href
+}
 
-    return {
-      getIconUrl,
-      image
-    }
-  }
+onMounted(() => {
+  convertImages(image.value)
 })
 </script>
 
@@ -72,6 +62,7 @@ export default defineComponent({
 
     &__link.router-link-active {
       background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.0748) 50.85%, rgba(255, 255, 255, 0) 100%);
+
       & .navbar-item__image {
         opacity: 1;
 

@@ -1,42 +1,35 @@
 <template>
   <nav class="navbar">
     <div class="navbar__inner">
-      <NavbarItem v-for="(path, index) of routesPath" :link="path" :icon="routesIcon[index]" :key="index" />
+      <NavbarItem 
+        v-for="(path, index) of routesPath" 
+        :key="index"
+        :link="path" 
+        :icon="routesIcon[index]" 
+      />
     </div>
   </nav>
 </template>
 
-<script>
-import { defineComponent, ref, toRefs, toRef, reactive } from 'vue'
+<script setup>
+import { reactive } from 'vue'
 import NavbarItem from '@/components/NavbarItem.vue';
 import { useRouter } from 'vue-router'
 
-export default defineComponent({
-  name: 'TheNavbar',
-  components: { NavbarItem },
-  props: {},
-  setup(props, context) {
-    // const whiteList = ['home', 'search', 'credit', 'account']
-    const whiteList = ['home', 'search']
-    const router = useRouter()
-    // TODO: refactor this declaration
-    const routesPath = reactive(router.getRoutes().map(route => {
-      if (whiteList.includes(route.name)) return route.path
-    }).filter(route => route !== undefined))
-    const routesIcon = [
-      'icon-home.svg',
-      'icon-loupe.svg',
-      'icon-credit.svg',
-      'icon-account.svg',
-    ]
+// const whiteList = ['home', 'search', 'credit', 'account']
+const whiteList = ['home', 'search']
+const router = useRouter()
+// TODO: refactor this declaration
+const routesPath = reactive(router.getRoutes().map(route => {
+  if (whiteList.includes(route.name)) return route.path
+}).filter(route => route !== undefined))
 
-    return {
-      routesPath,
-      routesIcon
-    }
-  }
-})
-
+const routesIcon = [
+  'icon-home.svg',
+  'icon-loupe.svg',
+  'icon-credit.svg',
+  'icon-account.svg',
+]
 </script>
 
 <style lang='scss' scoped>

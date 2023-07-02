@@ -16,9 +16,11 @@
 
 <script setup lang="ts">
 import { VueFinalModal } from 'vue-final-modal'
+
 defineProps<{
   videoKey?: string
 }>()
+
 const emit = defineEmits<{
   (e: 'confirm'): void
 }>()

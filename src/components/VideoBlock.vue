@@ -4,36 +4,25 @@
   </div>
 </template>
 
-<script>
-import { defineComponent, ref } from 'vue'
+<script setup>
 import { useModal } from 'vue-final-modal'
 import ModalsConfirm from '@/components/ModalsConfirm.vue'
 
-export default defineComponent({
-  name: 'VideoBlock',
-  components: {},
-  props: {
-    video: { type: Object, required: true }
+const props = defineProps({
+  video: { type: Object, required: true }
+})
+
+const { open, close } = useModal({
+  component: ModalsConfirm,
+  attrs: {
+    videoKey: props.video.key,
+    onConfirm() {
+      close()
+    },
   },
-  setup(props, context) {
-
-    const { open, close } = useModal({
-      component: ModalsConfirm,
-      attrs: {
-        videoKey: props.video.key,
-        onConfirm() {
-          close()
-        },
-      },
-      // slots: {
-      //   default: '<p>The content of the modal</p>',
-      // },
-    })
-
-    return {
-      open
-    }
-  }
+  // slots: {
+  //   default: '<p>The content of the modal</p>',
+  // },
 })
 </script>
 

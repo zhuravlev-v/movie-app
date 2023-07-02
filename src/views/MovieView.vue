@@ -6,15 +6,7 @@
       </RouterLink>
       <div class="preview" ref="preview" v-if="movie">
         <div class="preview__inner">
-          <h1 class="preview__title">{{ movie.title }}</h1>
-          <div class="preview__row">
-            <span class="preview__year">{{ movie.release_date_parsed }}</span>
-          </div>
-          <p class="preview__description">{{ movie.overview }}</p>
-          <div class="preview__actors">
-            <span class="actor" v-for="actor of actorsHidden">{{ actor }}</span>
-            <i class="actor">…</i>
-          </div>
+          <MovieInfoBase :movie="movie" :actors="actorsHidden" />
           <div class="preview__bottom">
             <div class="preview__genres">
               <h3 class="preview__genres-title">movie</h3>
@@ -35,9 +27,10 @@
   </div>
 </template>
 
-<script>
-import { defineComponent, onMounted, reactive, ref, computed } from 'vue'
+<script setup>
+import { onMounted, reactive, ref, computed } from 'vue'
 import VideoSlider from '@/components/VideoSlider.vue'
+import MovieInfoBase from '@/components/MovieInfoBase.vue'
 import { useFetch } from '@/service/fetch'
 import { useRoute, useRouter } from 'vue-router'
 import { getMoviePosterUrl } from '@/service/getMoviePosterUrl'
@@ -45,78 +38,43 @@ import { setBackground } from '@/utils/setBackground'
 import { parseDate } from '@/utils/parseDate'
 import { convertImages } from '@/service/convertImages'
 
-export default defineComponent({
-  name: 'MovieView',
-  components: { VideoSlider },
-  props: {},
-  setup(props, context) {
-    let rootElement = ref(null)
-    let movie = ref(null)
-    let movieError = ref(null)
-    let credits = ref(null)
-    let creditsError = ref(null)
-    let actors = ref([])
-    let actorsHidden = computed(() => {
-      const array = [...actors.value].splice(0, 3)
-      return array
-    })
-    // let isActorsHidden = ref(true)
-    // let actorsHidden = computed(() => {
-    //   let array = []
-    //   if (isActorsHidden.value) {
-    //     array = [...actors.value].splice(0, 3)
-    //     array.push('…')
-    //   }
-    //   else {
-    //     array = actors.value
-    //   }
-    //   return array
-    // })
+let rootElement = ref(null)
+let movie = ref(null)
+let movieError = ref(null)
+let credits = ref(null)
+let creditsError = ref(null)
+let actors = ref([])
+let actorsHidden = computed(() => {
+  const array = [...actors.value].splice(0, 3)
+  return array
+})
 
-    const route = useRoute()
-    const router = useRouter()
-    let btnPrev = reactive({
-      to: '/',
-      name: 'Home'
-    })
+const route = useRoute()
+const router = useRouter()
+let btnPrev = reactive({
+  to: '/',
+  name: 'Home'
+})
 
-    if (router.prevRoute.name && router.prevRoute.path) {
-      btnPrev.to = router.prevRoute.path
-      btnPrev.name = router.prevRoute.name
-    }
+if (router.prevRoute.name && router.prevRoute.path) {
+  btnPrev.to = router.prevRoute.path
+  btnPrev.name = router.prevRoute.name
+}
 
-    // const onActorsBtn = () => {
-    //   isActorsHidden.value = !isActorsHidden.value
-    // }
+onMounted(async () => {
+  ({ data: movie.value, error: movieError.value } = await useFetch(`/movie/${route.params.id}`));
+  ({ data: credits.value, error: creditsError.value } = await useFetch(`/movie/${route.params.id}/credits`));
 
-    onMounted(async () => {
-      ({ data: movie.value, error: movieError.value } = await useFetch(`/movie/${route.params.id}`));
-      ({ data: credits.value, error: creditsError.value } = await useFetch(`/movie/${route.params.id}/credits`));
-
-      if (movie?.value) {
-        movie.value.release_date_parsed = parseDate(movie.value.release_date, 'full')
-        const posterUrl = movie.value.backdrop_path ? getMoviePosterUrl(movie.value.backdrop_path) : getMoviePosterUrl(movie.value.poster_path)
-        setBackground(rootElement.value, posterUrl)
-      }
-      if (credits?.value) {
-        actors.value = credits.value.cast.map(actor => actor.original_name)
-      }
-
-      convertImages(rootElement.value, '[data-convertable]')
-    })
-
-    return {
-      rootElement,
-      btnPrev,
-      movie,
-      // movieError,
-      credits,
-      // creditsError,
-      actors,
-      actorsHidden,
-      // onActorsBtn
-    }
+  if (movie?.value) {
+    movie.value.release_date_parsed = parseDate(movie.value.release_date, 'full')
+    const posterUrl = movie.value.backdrop_path ? getMoviePosterUrl(movie.value.backdrop_path) : getMoviePosterUrl(movie.value.poster_path)
+    setBackground(rootElement.value, posterUrl)
   }
+  if (credits?.value) {
+    actors.value = credits.value.cast.map(actor => actor.original_name)
+  }
+
+  convertImages(rootElement.value, '[data-convertable]')
 })
 </script>
 
@@ -213,33 +171,6 @@ export default defineComponent({
     flex-grow: 1;
   }
 
-  &__title {
-    font-family: 'Staatliches';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 112px;
-    line-height: 90%;
-    letter-spacing: -0.02em;
-    color: #FFFFFF;
-    text-transform: uppercase;
-    margin-bottom: 35px;
-
-    @media (max-width: 1024px) {
-      font-size: 80px;
-    }
-
-    @media (max-width: 768px) {
-      font-size: 65px;
-    }
-  }
-
-  &__row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 0px 0px 20px;
-  }
-
   &__rating {
 
     &:deep {
@@ -333,19 +264,6 @@ export default defineComponent({
   &:not(:last-child) {
     &::after {
       content: ' / ';
-    }
-  }
-}
-
-.actor {
-  font-weight: 500;
-  font-size: 24px;
-  line-height: 28px;
-  letter-spacing: -0.01em;
-
-  &:not(:last-of-type) {
-    &::after {
-      content: ', ';
     }
   }
 }

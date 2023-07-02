@@ -12,58 +12,46 @@
   </RouterLink>
 </template>
 
-<script>
-import { defineComponent, ref, computed } from 'vue'
+<script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMoviePosterUrl } from '@/service/getMoviePosterUrl'
 import { parseDate } from '@/utils/parseDate'
 
-export default defineComponent({
-  name: 'SearchResultItem',
-  components: {},
-  props: {
-    item: { type: Object, required: true }
-  },
-  setup(props, context) {
-    const MAX_OVERVIEW_CHARS = 180
+const props = defineProps({
+  item: { type: Object, required: true }
+})
 
-    const router = useRouter()
+const MAX_OVERVIEW_CHARS = 180
 
-    const onClick = () => {
-      if (props.item.type === 'movie') {
-        router.push(`movie/${props.item.id}`)
-      }
-      else {
-        router.push(`series/${props.item.id}`)
-      }
-    }
+const router = useRouter()
 
-    const getMoviePoster = (url) => {
-      return url === null ? new URL('@/assets/images/search-item-placeholder.jpeg', import.meta.url).href : getMoviePosterUrl(url, 'w342')
-    }
-
-    const releaseDate = computed(() => {
-      if (props.item.type === 'movie') {
-        return parseDate(props.item.release_date, 'year')
-      }
-      else {
-        return parseDate(props.item.first_air_date, 'year')
-      }
-    })
-
-    const overviewClipped = computed(() => {
-      return props.item.overview.length <= MAX_OVERVIEW_CHARS ?
-        props.item.overview :
-        props.item.overview.split('').splice(0, MAX_OVERVIEW_CHARS).join('') + '…'
-    })
-
-    return {
-      onClick,
-      getMoviePoster,
-      releaseDate,
-      overviewClipped
-    }
+const onClick = () => {
+  if (props.item.type === 'movie') {
+    router.push(`movie/${props.item.id}`)
   }
+  else {
+    router.push(`series/${props.item.id}`)
+  }
+}
+
+const getMoviePoster = (url) => {
+  return url === null ? new URL('@/assets/images/search-item-placeholder.jpeg', import.meta.url).href : getMoviePosterUrl(url, 'w342')
+}
+
+const releaseDate = computed(() => {
+  if (props.item.type === 'movie') {
+    return parseDate(props.item.release_date, 'year')
+  }
+  else {
+    return parseDate(props.item.first_air_date, 'year')
+  }
+})
+
+const overviewClipped = computed(() => {
+  return props.item.overview.length <= MAX_OVERVIEW_CHARS ?
+    props.item.overview :
+    props.item.overview.split('').splice(0, MAX_OVERVIEW_CHARS).join('') + '…'
 })
 </script>
 
@@ -77,7 +65,8 @@ export default defineComponent({
   max-width: 1125px;
 
   &:hover {
-    color: rgba($color: #FFFFFF, $alpha: 0.22);
+    // color: rgba($color: #FFFFFF, $alpha: 0.22);
+    color: #FFFFFF;
   }
 
   @media (max-width: 768px) {

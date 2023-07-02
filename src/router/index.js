@@ -24,11 +24,11 @@ const router = createRouter({
       name: 'search',
       component: () => import('../views/SearchView.vue')
     },
-    {
-      path: '/credit',
-      name: 'credit',
-      component: () => import('../views/CreditView.vue')
-    },
+    // {
+    //   path: '/credit',
+    //   name: 'credit',
+    //   component: () => import('../views/CreditView.vue')
+    // },
     {
       path: '/account',
       name: 'account',

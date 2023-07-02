@@ -2,25 +2,24 @@
   <div class="search">
     <section class="search-block">
       <div class="search__input-block">
-        <input 
-          :value="input"
-          @input="onInputChange" 
-          @keydown.enter="onInputEnter" 
-          :placeholder="inputPlaceholder"
-          type="text" 
-          class="search__input"
-        >
+        <input :value="input" @input="onInputChange" @keydown.enter="onInputEnter" :placeholder="inputPlaceholder"
+          type="text" class="search__input">
         <div class="search__keyboard">
           <theVirtualKeyboard @onChange="onChange" @onKeyPress="onKeyPress" :input="input" />
         </div>
       </div>
       <div class="search__select">
         <button @click="toggleMoviesOrTV('all')" :class="['selector', { active: moviesOrTV === 'all' }]"
-          id="all">All</button>
-        <button @click="toggleMoviesOrTV('tv')" :class="['selector', { active: moviesOrTV === 'tv' }]" id="tv">TV
-          Shows</button>
+          id="all">
+          All
+        </button>
+        <button @click="toggleMoviesOrTV('tv')" :class="['selector', { active: moviesOrTV === 'tv' }]" id="tv">
+          TV Shows
+        </button>
         <button @click="toggleMoviesOrTV('movies')" :class="['selector', { active: moviesOrTV === 'movies' }]"
-          id="movie">Movies</button>
+          id="movie">
+          Movies
+        </button>
         <button v-for="genre of genres" @click="toggleGenre(genre)" :id="genre.id"
           :class="['selector selector_active-white', { active: selectedGenres[genre.type].find(selectedGenre => selectedGenre.id === genre.id) }]">
           {{ genre.name }}
@@ -34,271 +33,247 @@
   </div>
 </template>
 
-<script>
-import { defineComponent, onMounted, onUnmounted, ref, computed, toRef, toRefs, reactive } from 'vue'
+<script setup>
+import { onMounted, onUnmounted, ref, computed, toRef, toRefs, reactive } from 'vue'
 import { useFetch } from '@/service/fetch'
 import theVirtualKeyboard from '@/components/theVirtualKeyboard.vue'
 import SearchResultSlider from '@/components/SearchResultSlider.vue'
 
-export default defineComponent({
-  name: 'SearchView',
-  components: { theVirtualKeyboard, SearchResultSlider },
-  props: {},
-  setup(props, context) {
-    const selectedGenres = ref({
-      tv: reactive([]),
-      movies: reactive([]),
-    })
-    const searchResults = ref([])
-    let isQueryChanged = true
-    let moviesOrTV = ref('all')
-    const tvGenres = ref([])
-    const tvGenresError = ref(null)
-    const moviesGenres = ref([])
-    const moviesGenresError = ref(null)
-    const genres = computed(() => {
-      if (moviesOrTV.value === 'all') {
-        if (!(tvGenres?.value?.genres && moviesGenres?.value?.genres)) {
-          return []
-        }
-        else {
-          return [...tvGenres.value.genres, ...moviesGenres.value.genres]
-        }
-      }
-      else if (moviesOrTV.value === 'tv') {
-        if (!tvGenres?.value?.genres) {
-          return []
-        }
-        else {
-          return [...tvGenres.value.genres]
-        }
-      }
-      else if (moviesOrTV.value === 'movies') {
-        if (!moviesGenres?.value?.genres) {
-          return []
-        }
-        else {
-          return [...moviesGenres.value.genres]
-        }
-      }
-    })
-    const inputPlaceholder = ref('search')
-
-    const onResize = () => {
-      if (window.innerWidth >= 768) {
-        inputPlaceholder.value = 'search'
-      }
-      else {
-        inputPlaceholder.value = 'press enter to search'
-      }
+const selectedGenres = ref({
+  tv: reactive([]),
+  movies: reactive([]),
+})
+const searchResults = ref([])
+let isQueryChanged = true
+let moviesOrTV = ref('all')
+const tvGenres = ref([])
+const tvGenresError = ref(null)
+const moviesGenres = ref([])
+const moviesGenresError = ref(null)
+const genres = computed(() => {
+  if (moviesOrTV.value === 'all') {
+    if (!(tvGenres?.value?.genres && moviesGenres?.value?.genres)) {
+      return []
     }
-
-    const toggleMoviesOrTV = (id) => {
-      moviesOrTV.value = id
-    }
-
-    const toggleGenre = (genre) => {
-      const selectedIndex = selectedGenres.value[genre.type].findIndex(selectedGenre => selectedGenre.id === genre.id)
-
-      if (selectedIndex > -1) {
-        selectedGenres.value[genre.type].splice(selectedIndex, 1)
-      }
-      else {
-        selectedGenres.value[genre.type].push(genre)
-      }
-    }
-
-    const fetchGenres = async (genresName) => {
-      if (genresName === 'all') {
-        ({ data: tvGenres.value, error: tvGenresError.value } = await useFetch('/genre/tv/list?language=en'));
-        ({ data: moviesGenres.value, error: moviesGenresError.value } = await useFetch('/genre/movie/list?language=en'));
-
-        tvGenres.value.genres.forEach(genre => genre.type = 'tv')
-        moviesGenres.value.genres.forEach(genre => genre.type = 'movies')
-      }
-      else if (genresName === 'tv') {
-        ({ data: tvGenres.value, error: tvGenresError.value } = await useFetch('/genre/tv/list?language=en'));
-      }
-      else if (genresName === 'movies') {
-        ({ data: moviesGenres.value, error: moviesGenresError.value } = await useFetch('/genre/movie/list?language=en'));
-      }
-    }
-
-    const fetchResults = async () => {
-      if (!isQueryChanged) return
-
-      const BASE_PATH_TV_DISCOVER = '/discover/tv?include_adult=false&include_null_first_air_dates=false&language=en-US&page=1&sort_by=popularity.desc'
-      const BASE_PATH_MOVIES_DISCOVER = '/discover/movie?include_adult=false&include_null_first_air_dates=false&language=en-US&page=1&sort_by=popularity.desc'
-      const BASE_PATH_TV_SEARCH = '/search/tv?include_adult=false&language=en-US&page=1&query='
-      const BASE_PATH_MOVIES_SEARCH = '/search/movie?include_adult=false&language=en-US&page=1&query='
-      const query = input.value.trim()
-      let tvResult = []
-      let moviesResult = []
-
-      if (query === '') {
-        if (moviesOrTV.value === 'all') {
-          // fetch TV shows with ID genres or without
-          // TODO: doubling 1
-          if (selectedGenres.value.tv.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER);
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-          }
-          else {
-            const selectedTvIds = selectedGenres.value.tv.map(genre => genre.id).join('%2C')
-            const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER + '&with_genres=' + selectedTvIds);
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-          }
-          // fetch movies with ID genres or without
-          // TODO: doubling 2
-          if (selectedGenres.value.movies.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER);
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-          }
-          else {
-            const selectedMoviesIds = selectedGenres.value.movies.map(genre => genre.id).join('%2C')
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER + '&with_genres=' + selectedMoviesIds);
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-          }
-          searchResults.value = [...tvResult, ...moviesResult]
-        }
-        else if (moviesOrTV.value === 'tv') {
-          // TODO: doubling 1
-          if (selectedGenres.value.tv.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER);
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-          }
-          else {
-            const selectedTvIds = selectedGenres.value.tv.map(genre => genre.id).join('%2C')
-            const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER + '&with_genres=' + selectedTvIds);
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-          }
-          searchResults.value = [...tvResult]
-        }
-        else if (moviesOrTV.value === 'movies') {
-          // TODO: doubling 2
-          if (selectedGenres.value.movies.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER);
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-          }
-          else {
-            const selectedMoviesIds = selectedGenres.value.movies.map(genre => genre.id).join('%2C')
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER + '&with_genres=' + selectedMoviesIds);
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-          }
-          searchResults.value = [...moviesResult]
-        }
-      }
-      else { // fetch with query param
-        if (moviesOrTV.value === 'all') {
-          // fetch TV shows with query and ID genres or without
-          if (selectedGenres.value.tv.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-          }
-          else {
-            const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-            tvResult = tvResult.filter(resultItem => {
-              const genresIntersection = selectedGenres.value.tv.filter(genre => resultItem.genre_ids.includes(genre.id));
-              return genresIntersection.length > 0
-            })
-          }
-          // fetch movies with query and ID genres or without
-          if (selectedGenres.value.movies.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-          }
-          else {
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-            moviesResult = moviesResult.filter(resultItem => {
-              const genresIntersection = selectedGenres.value.movies.filter(genre => resultItem.genre_ids.includes(genre.id));
-              return genresIntersection.length > 0
-            })
-          }
-          searchResults.value = [...tvResult, ...moviesResult]
-        }
-        else if (moviesOrTV.value === 'tv') {
-          // fetch TV shows with query and ID genres or without
-          if (selectedGenres.value.tv.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-          }
-          else {
-            const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
-            tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
-            tvResult = tvResult.filter(resultItem => {
-              const genresIntersection = selectedGenres.value.tv.filter(genre => resultItem.genre_ids.includes(genre.id));
-              return genresIntersection.length > 0
-            })
-          }
-          searchResults.value = [...tvResult]
-        }
-        else if (moviesOrTV.value === 'movies') {
-          // fetch movies with query and ID genres or without
-          if (selectedGenres.value.movies.length === 0) {
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-          }
-          else {
-            const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
-            moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
-            moviesResult = moviesResult.filter(resultItem => {
-              const genresIntersection = selectedGenres.value.movies.filter(genre => resultItem.genre_ids.includes(genre.id));
-              return genresIntersection.length > 0
-            })
-          }
-          searchResults.value = [...moviesResult]
-        }
-      }
-    }
-
-    const input = ref('')
-
-    const onInputEnter = () => {
-      onKeyPress('{enter}')
-    }
-
-    const onKeyPress = (button) => {
-      // console.log("button", button)
-      if (button === '{enter}') fetchResults()
-    }
-
-    const onChange = (value) => {
-      input.value = value
-    }
-
-    const onInputChange = (event) => {
-      input.value = event.target.value
-    }
-
-    onMounted(async () => {
-      fetchGenres(moviesOrTV.value)
-      onResize()
-      window.addEventListener('resize', onResize)
-    })
-
-    onUnmounted(() => {
-      window.removeEventListener('resize', onResize)
-    })
-
-    return {
-      selectedGenres,
-      searchResults,
-      moviesOrTV,
-      toggleMoviesOrTV,
-      // tvGenres,
-      // moviesGenres,
-      genres,
-      input,
-      onKeyPress,
-      onChange,
-      onInputChange,
-      toggleGenre,
-      onInputEnter,
-      inputPlaceholder
+    else {
+      return [...tvGenres.value.genres, ...moviesGenres.value.genres]
     }
   }
+  else if (moviesOrTV.value === 'tv') {
+    if (!tvGenres?.value?.genres) {
+      return []
+    }
+    else {
+      return [...tvGenres.value.genres]
+    }
+  }
+  else if (moviesOrTV.value === 'movies') {
+    if (!moviesGenres?.value?.genres) {
+      return []
+    }
+    else {
+      return [...moviesGenres.value.genres]
+    }
+  }
+})
+const inputPlaceholder = ref('search')
+
+const onResize = () => {
+  if (window.innerWidth >= 768) {
+    inputPlaceholder.value = 'search'
+  }
+  else {
+    inputPlaceholder.value = 'press enter to search'
+  }
+}
+
+const toggleMoviesOrTV = (id) => {
+  moviesOrTV.value = id
+}
+
+const toggleGenre = (genre) => {
+  const selectedIndex = selectedGenres.value[genre.type].findIndex(selectedGenre => selectedGenre.id === genre.id)
+
+  if (selectedIndex > -1) {
+    selectedGenres.value[genre.type].splice(selectedIndex, 1)
+  }
+  else {
+    selectedGenres.value[genre.type].push(genre)
+  }
+}
+
+const fetchGenres = async (genresName) => {
+  if (genresName === 'all') {
+    ({ data: tvGenres.value, error: tvGenresError.value } = await useFetch('/genre/tv/list?language=en'));
+    ({ data: moviesGenres.value, error: moviesGenresError.value } = await useFetch('/genre/movie/list?language=en'));
+
+    tvGenres.value.genres.forEach(genre => genre.type = 'tv')
+    moviesGenres.value.genres.forEach(genre => genre.type = 'movies')
+  }
+  else if (genresName === 'tv') {
+    ({ data: tvGenres.value, error: tvGenresError.value } = await useFetch('/genre/tv/list?language=en'));
+  }
+  else if (genresName === 'movies') {
+    ({ data: moviesGenres.value, error: moviesGenresError.value } = await useFetch('/genre/movie/list?language=en'));
+  }
+}
+
+const fetchResults = async () => {
+  if (!isQueryChanged) return
+
+  const BASE_PATH_TV_DISCOVER = '/discover/tv?include_adult=false&include_null_first_air_dates=false&language=en-US&page=1&sort_by=popularity.desc'
+  const BASE_PATH_MOVIES_DISCOVER = '/discover/movie?include_adult=false&include_null_first_air_dates=false&language=en-US&page=1&sort_by=popularity.desc'
+  const BASE_PATH_TV_SEARCH = '/search/tv?include_adult=false&language=en-US&page=1&query='
+  const BASE_PATH_MOVIES_SEARCH = '/search/movie?include_adult=false&language=en-US&page=1&query='
+  const query = input.value.trim()
+  let tvResult = []
+  let moviesResult = []
+
+  if (query === '') {
+    if (moviesOrTV.value === 'all') {
+      // fetch TV shows with ID genres or without
+      // TODO: doubling 1
+      if (selectedGenres.value.tv.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER);
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+      }
+      else {
+        const selectedTvIds = selectedGenres.value.tv.map(genre => genre.id).join('%2C')
+        const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER + '&with_genres=' + selectedTvIds);
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+      }
+      // fetch movies with ID genres or without
+      // TODO: doubling 2
+      if (selectedGenres.value.movies.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER);
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+      }
+      else {
+        const selectedMoviesIds = selectedGenres.value.movies.map(genre => genre.id).join('%2C')
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER + '&with_genres=' + selectedMoviesIds);
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+      }
+      searchResults.value = [...tvResult, ...moviesResult]
+    }
+    else if (moviesOrTV.value === 'tv') {
+      // TODO: doubling 1
+      if (selectedGenres.value.tv.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER);
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+      }
+      else {
+        const selectedTvIds = selectedGenres.value.tv.map(genre => genre.id).join('%2C')
+        const { data, error } = await useFetch(BASE_PATH_TV_DISCOVER + '&with_genres=' + selectedTvIds);
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+      }
+      searchResults.value = [...tvResult]
+    }
+    else if (moviesOrTV.value === 'movies') {
+      // TODO: doubling 2
+      if (selectedGenres.value.movies.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER);
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+      }
+      else {
+        const selectedMoviesIds = selectedGenres.value.movies.map(genre => genre.id).join('%2C')
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_DISCOVER + '&with_genres=' + selectedMoviesIds);
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+      }
+      searchResults.value = [...moviesResult]
+    }
+  }
+  else { // fetch with query param
+    if (moviesOrTV.value === 'all') {
+      // fetch TV shows with query and ID genres or without
+      if (selectedGenres.value.tv.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+      }
+      else {
+        const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+        tvResult = tvResult.filter(resultItem => {
+          const genresIntersection = selectedGenres.value.tv.filter(genre => resultItem.genre_ids.includes(genre.id));
+          return genresIntersection.length > 0
+        })
+      }
+      // fetch movies with query and ID genres or without
+      if (selectedGenres.value.movies.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+      }
+      else {
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+        moviesResult = moviesResult.filter(resultItem => {
+          const genresIntersection = selectedGenres.value.movies.filter(genre => resultItem.genre_ids.includes(genre.id));
+          return genresIntersection.length > 0
+        })
+      }
+      searchResults.value = [...tvResult, ...moviesResult]
+    }
+    else if (moviesOrTV.value === 'tv') {
+      // fetch TV shows with query and ID genres or without
+      if (selectedGenres.value.tv.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+      }
+      else {
+        const { data, error } = await useFetch(BASE_PATH_TV_SEARCH + encodeURI(query));
+        tvResult = data.results.map(item => ({ ...item, type: 'tv' }))
+        tvResult = tvResult.filter(resultItem => {
+          const genresIntersection = selectedGenres.value.tv.filter(genre => resultItem.genre_ids.includes(genre.id));
+          return genresIntersection.length > 0
+        })
+      }
+      searchResults.value = [...tvResult]
+    }
+    else if (moviesOrTV.value === 'movies') {
+      // fetch movies with query and ID genres or without
+      if (selectedGenres.value.movies.length === 0) {
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+      }
+      else {
+        const { data, error } = await useFetch(BASE_PATH_MOVIES_SEARCH + encodeURI(query));
+        moviesResult = data.results.map(item => ({ ...item, type: 'movie' }))
+        moviesResult = moviesResult.filter(resultItem => {
+          const genresIntersection = selectedGenres.value.movies.filter(genre => resultItem.genre_ids.includes(genre.id));
+          return genresIntersection.length > 0
+        })
+      }
+      searchResults.value = [...moviesResult]
+    }
+  }
+}
+
+const input = ref('')
+
+const onInputEnter = () => {
+  onKeyPress('{enter}')
+}
+
+const onKeyPress = (button) => {
+  // console.log("button", button)
+  if (button === '{enter}') fetchResults()
+}
+
+const onChange = (value) => {
+  input.value = value
+}
+
+const onInputChange = (event) => {
+  input.value = event.target.value
+}
+
+onMounted(async () => {
+  fetchGenres(moviesOrTV.value)
+  onResize()
+  window.addEventListener('resize', onResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
 })
 </script>
 
@@ -452,7 +427,7 @@ export default defineComponent({
   }
 
   @media (max-width: 768px) {
-    max-width: 400px;
+    // max-width: 400px;
     margin: 0 auto;
   }
 

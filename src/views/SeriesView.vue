@@ -6,21 +6,7 @@
       </RouterLink>
       <div class="preview" ref="preview" v-if="movie">
         <div class="preview__inner">
-          <h1 class="preview__title">{{ movie.name }}</h1>
-          <div class="preview__row">
-            <div class="preview__rating">
-              <span class="preview__rating-vote">{{ movie.vote_average.toFixed(1) }}</span>
-              <img class="preview__star" src="@/assets/images/icon-star.svg" alt="" data-convertable>
-              <!-- <p class="preview__rating-title">Rate</p> -->
-            </div>
-            <span class="preview__year">{{ movie.release_date_parsed }}</span>
-            <span class="preview__total-seasons">Season {{ movie.seasons.length }}</span>
-          </div>
-          <p class="preview__description">{{ overview }}</p>
-          <div class="preview__actors" v-if="actorsHidden.length > 0">
-            <span class="actor" v-for="actor of actorsHidden">{{ actor }}</span>
-            <i class="actor">…</i>
-          </div>
+          <MovieInfoBase :movie="movie" :actors="actorsHidden" :seasonIndex="seasonIndex" />
           <div :class="['preview__bottom', { preview__bottom_mb: movie.seasons.length > 3 }]">
             <div class="preview__genres">
               <h3 v-if="movie.seasons.length < 4" class="preview__genres-title">
@@ -44,11 +30,12 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import VideoSlider from '@/components/VideoSlider.vue'
 import Multiselect from '@vueform/multiselect'
+import MovieInfoBase from '@/components/MovieInfoBase.vue'
 import '@vueform/multiselect/themes/default.css'
-import { defineComponent, ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFetch } from '@/service/fetch'
 import { getMoviePosterUrl } from '@/service/getMoviePosterUrl'
@@ -56,74 +43,57 @@ import { convertImages } from '@/service/convertImages'
 import { setBackground } from '@/utils/setBackground'
 import { parseDate } from '@/utils/parseDate'
 
-export default defineComponent({
-  name: 'SeriesView',
-  components: { VideoSlider, Multiselect },
-  props: {},
-  setup(props, context) {
-    let rootElement = ref(null)
-    const route = useRoute()
-    const router = useRouter()
-    let movie = ref(null)
-    let movieError = ref(null)
-    let credits = ref(null)
-    let creditsError = ref(null)
-    let actors = ref([])
-    let actorsHidden = computed(() => {
-      const array = [...actors.value].splice(0, 3)
-      return array
-    })
-    let btnPrev = reactive({
-      to: '/',
-      name: 'Home'
-    })
-    const seasonIndex = ref(0)
-    const setSeason = (index) => {
-      seasonIndex.value = index
-    }
-    const overview = computed(() => {
-      if (movie) {
-        return movie.value.seasons[seasonIndex.value].overview === '' ? movie.value.overview : movie.value.seasons[seasonIndex.value].overview
-      }
-      else {
-        return ''
-      }
-    })
-
-    if (router.prevRoute.name && router.prevRoute.path) {
-      btnPrev.to = router.prevRoute.path
-      btnPrev.name = router.prevRoute.name
-    }
-
-
-    onMounted(async () => {
-      ({ data: movie.value, error: movieError.value } = await useFetch(`/tv/${route.params.id}`));
-      ({ data: credits.value, error: creditsError.value } = await useFetch(`/tv/${route.params.id}/credits`));
-
-      if (movie?.value) {
-        movie.value.release_date_parsed = parseDate(movie.value.first_air_date, 'full')
-        const posterUrl = movie.value.backdrop_path ? getMoviePosterUrl(movie.value.backdrop_path) : getMoviePosterUrl(movie.value.poster_path)
-        setBackground(rootElement.value, posterUrl)
-      }
-      if (credits?.value) {
-        actors.value = credits.value.cast.map(actor => actor.original_name)
-      }
-
-      convertImages(rootElement.value, '[data-convertable]')
-    })
-
-    return {
-      rootElement,
-      btnPrev,
-      movie,
-      credits,
-      actorsHidden,
-      seasonIndex,
-      setSeason,
-      overview,
-    }
+let rootElement = ref(null)
+const route = useRoute()
+const router = useRouter()
+let movie = ref(null)
+let movieError = ref(null)
+let credits = ref(null)
+let creditsError = ref(null)
+let actors = ref([])
+let actorsHidden = computed(() => {
+  const array = [...actors.value].splice(0, 3)
+  return array
+})
+let btnPrev = reactive({
+  to: '/',
+  name: 'Home'
+})
+const seasonIndex = ref(0)
+const setSeason = (index) => {
+  seasonIndex.value = index
+}
+const overview = computed(() => {
+  if (movie) {
+    return movie.value.seasons[seasonIndex.value].overview === '' ? movie.value.overview : movie.value.seasons[seasonIndex.value].overview
+  }
+  else {
+    return ''
   }
 })
+
+if (router.prevRoute.name && router.prevRoute.path) {
+  btnPrev.to = router.prevRoute.path
+  btnPrev.name = router.prevRoute.name
+}
+
+
+onMounted(async () => {
+  ({ data: movie.value, error: movieError.value } = await useFetch(`/tv/${route.params.id}`));
+  ({ data: credits.value, error: creditsError.value } = await useFetch(`/tv/${route.params.id}/credits`));
+
+  if (movie?.value) {
+    movie.value.release_date_parsed = parseDate(movie.value.first_air_date, 'full')
+    const posterUrl = movie.value.backdrop_path ? getMoviePosterUrl(movie.value.backdrop_path) : getMoviePosterUrl(movie.value.poster_path)
+    setBackground(rootElement.value, posterUrl)
+  }
+  if (credits?.value) {
+    actors.value = credits.value.cast.map(actor => actor.original_name)
+  }
+
+  convertImages(rootElement.value, '[data-convertable]')
+})
+
 </script>
 
 <style lang='scss' scoped>
@@ -216,33 +186,6 @@ export default defineComponent({
     flex-grow: 1;
   }
 
-  &__title {
-    font-family: 'Staatliches';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 112px;
-    line-height: 90%;
-    letter-spacing: -0.02em;
-    color: #FFFFFF;
-    text-transform: uppercase;
-    margin-bottom: 35px;
-
-    @media (max-width: 1024px) {
-      font-size: 80px;
-    }
-
-    @media (max-width: 768px) {
-      font-size: 65px;
-    }
-  }
-
-  &__row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 0px 0px 20px;
-  }
-
   &__rating {
     display: flex;
     align-items: center;
@@ -263,59 +206,6 @@ export default defineComponent({
         }
       }
     }
-  }
-
-  &__rating-title {
-    font-weight: 400;
-    font-size: 22px;
-    // line-height: 28px;
-    text-align: right;
-    letter-spacing: -0.015em;
-    opacity: 0.22;
-  }
-
-  &__rating-vote {
-    font-weight: 400;
-    font-size: 16px;
-    // line-height: 61px;
-    letter-spacing: 0.02em;
-  }
-
-  &__star {}
-
-  &__year {
-    display: inline-block;
-    padding: 3px 7px;
-    background: rgba(255, 255, 255, 0.31);
-    border-radius: 4px;
-  }
-
-  &__total-seasons {
-    // font-family: 'Public Sans';
-    font-style: normal;
-    font-weight: 500;
-    font-size: 20px;
-    letter-spacing: -0.01em;
-    color: rgba($color: #FFFFFF, $alpha: 0.51);
-  }
-
-  &__description {
-    font-family: 'Public Sans';
-    font-weight: 400;
-    font-size: 20px;
-    line-height: 132%;
-    letter-spacing: -0.01em;
-    opacity: 0.69;
-  }
-
-  &__actors {
-    margin: 75px 0 30px;
-  }
-
-  &__actors-btn {
-    color: inherit;
-    display: block;
-    margin-top: 10px;
   }
 
   &__bottom {
@@ -392,19 +282,6 @@ export default defineComponent({
   }
 }
 
-.actor {
-  font-weight: 500;
-  font-size: 24px;
-  line-height: 28px;
-  letter-spacing: -0.01em;
-
-  &:not(:last-of-type) {
-    &::after {
-      content: ', ';
-    }
-  }
-}
-
 .multiselect.is-active {
   box-shadow: unset;
 }
@@ -421,9 +298,11 @@ export default defineComponent({
     max-width: 500px;
     margin: 0 auto 0 0;
   }
+
   @media (max-width: 768px) {
     max-width: 320px;
   }
+
   @media (max-width: 500px) {
     max-width: 200px;
   }
